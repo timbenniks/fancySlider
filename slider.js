@@ -1,3 +1,10 @@
+/* 
+*	@Class:			Slider
+*	@Description:	A simple slider script with a graceful fallback to an input or type range ot text.
+*	@Author:		Tim Benniks <tim@timbenniks.nl>
+*	@Dependencies:	jQuery
+---------------------------------------------------------------------------- */
+
 /*globals $*/
 var Slider = function(container, options)
 {
