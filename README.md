@@ -1,6 +1,6 @@
 fancySlider
 ===========
-A simple slider script with a graceful fallback to an input or type range ot text.
+A simple slider script which acts as a polyfill for the range input.
 
 Implementation
 --------------
