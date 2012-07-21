@@ -32,7 +32,7 @@ $(function()
 	// Trigger events on the slider DOM node.
 	$('button').click(function()
 	{
-		$('#fancySlider')trigger({ type: 'slideTo', position: 0.3 });
+		$('#fancySlider').trigger({ type: 'slideTo', position: 0.3 });
 	});
 });	
 ```
