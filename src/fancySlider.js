@@ -1,5 +1,5 @@
 /* 
-*	@Class:			fancySlider
+*	@Class:			fancySlider v2
 *	@Description:	A simple slider script which acts as a polyfill for the range input.
 *	@Author:		Tim Benniks <tim@timbenniks.nl>
 *	@Dependencies:	jQuery
@@ -7,163 +7,119 @@
 *	@Project page:	http://fancyslider.timbenniks.nl
 ---------------------------------------------------------------------------- */
 
-(function($)
+(function (win)
 {
-	/*globals $*/
-	var FancySlider = function(container, options)
+	'use strict';
+
+	/**
+	 * Slider Constructor.
+	 * @param {HTMLElement} el node.
+	 * @param {object} options options object
+	 * @constructor
+	 */
+	win.Slider = function (el, options)
 	{
-		this.options = $.extend({}, this.defaults, options);
-		this.container = $(container);
-		this.init();
-	};
-	
-	FancySlider.prototype =
-	{
-		init: function()
+		var element = $(el),
+			track = $('<div class="slider-track" />'), 
+			head = $('<div class="slider-head" />'), 
+			glass = $('<div class="slider-glass" />'), 
+			base = $('<div class="slider-base" />').append(track, head, glass).addClass(el.className),
+			headWidth, width, maxHeadX, grabX,
+			doc = $(document),
+			startPos = options.startPos || 0,
+			onSlide = options.onSlide,
+			onSlideEnd = options.onSlideEnd,
+
+		init = function()
 		{
-			this.track = $('<div class="slider-track" />');
-			this.head = $('<div class="slider-head" />');
-			this.glass = $('<div class="slider-glass" />');	
-			this.base = $('<div class="slider-base" />').append(this.track, this.head, this.glass).addClass(this.container[0].className);
+			element.after(base).hide();
+
+			headWidth = head.width();
+			width = base.width();
+			maxHeadX = width - headWidth + 1;
+			grabX = headWidth / 2;
 			
-			this.container.after(this.base).hide();
-			
-			this.headWidth = this.head.width();
-			this.width = this.base.width();
-			this.maxHeadX = this.width - this.headWidth + 1;
-			this.doc = $(document);
-		
-			this.assignListeners();
-	
-			setTimeout($.proxy(function() 
-			{ 
-				this.position(this.options.startPos);
-				this.container.val(this.options.startPos);
-			
-			}, this), 0);
+			setPosition(startPos);
+
+			glass.on('mousedown touchstart', handleDown);
 		},
-	
-		assignListeners: function()
+
+		handleDown = function(e)
 		{
-			this.glass.on('mousedown touchmove', $.proxy(function(e) 
+			e.preventDefault();
+
+			var posX = getRelativePosition(glass[0], e),			
+				headX = getPositionFromNode(head[0]) - getPositionFromNode(base[0]);
+			
+			if(posX >= headX && posX < headX + headWidth) 
 			{
-				e.preventDefault();
-	
-				var pos = this.getRelPos(this.glass[0], e),			
-					grabX = this.headWidth / 2,
-					headX = this.positionInt();
-	
-				if(pos.x >= headX && pos.x < headX + this.headWidth) 
-				{
-					grabX = pos.x - headX;
-				}
-	
-				this.positionInt(pos.x - grabX);
-	
-				this.container.trigger({ type: 'slideStart', position: this.lerp(0, 0, this.maxHeadX, 1, (this.getPos(this.head[0]).x - this.getPos(this.base[0]).x)) }); 
-	
-				this.doc.on(
-				{
-					'mousemove': $.proxy(function(e)
-					{
-						e.preventDefault();
-						var pos = this.getRelPos(this.glass[0], e);
-						this.positionInt(pos.x - grabX);	
-					}, this),
-	
-					'mouseup': $.proxy(function() 
-					{
-						this.doc.off('mousemove mouseup');
-						this.container.trigger({ type: 'slideEnd', position: this.lerp(0, 0, this.maxHeadX, 1, (this.getPos(this.head[0]).x - this.getPos(this.base[0]).x)) });	
-					}, this)
-				});
-			}, this));
-	
-			this.container.on(
+				grabX = posX - headX;
+			}
+
+			setPosition(posX - grabX);
+
+			doc.on(
 			{
-				'slideTo': $.proxy(function(e) { this.position(e.position); }, this),
-				'slide': $.proxy(function(e) { this.container.val(e.position); }, this),
-				'change': $.proxy(function(e) {	this.position($(e.currentTarget).val()); }, this)
+				'mousemove touchmove': handleMove,
+				'mouseup touchend': handleEnd
 			});
 		},
-	
-		positionInt: function(e) 
+
+		handleMove = function(e)
 		{
-			if(!e)
-			{
-				return this.getPos(this.head[0]).x - this.getPos(this.base[0]).x;
-			} 
-			else 
-			{
-				var left = Math.round(this.cap(e, 0, this.maxHeadX)) + "px";
-				this.head.css({ left: left });
-			}
-			
-			this.container.trigger({ type: 'slide', position: this.lerp(0, 0, this.maxHeadX, 1, (this.getPos(this.head[0]).x - this.getPos(this.base[0]).x)) });
+			e.preventDefault();
+			var posX = getRelativePosition(glass[0], e);
+			setPosition(posX - grabX);	
 		},
-		
-		position: function(e) 
+
+		handleEnd = function(e)
 		{
-			this.positionInt(this.lerp(0, 0, 1, this.maxHeadX, e));
+			var posX = getRelativePosition(glass[0], e);
+			if(onSlideEnd && typeof onSlideEnd === 'function') onSlideEnd(posX - grabX);
+
+			doc.off('mousemove touchmove mouseup touchend');
 		},
-		
-		cap: function(t, mi, ma) 
+
+		cap = function(t, mi, ma) 
 		{
-			if(t < mi)
-			{
-				return mi;
-			}
-			
-			if(t > ma)
-			{
-				return ma;
-			}
+			if(t < mi) return mi;
+			if(t > ma) return ma;
 		
 			return t;
 		},
-		
-		lerp: function(t0, v0, t1, v1, t) 
-		{
-			return (t - t0) * (v1 - v0) / (t1 - t0) + v0;
+
+		setPosition = function(e)
+		{	
+			var pos = Math.round(cap(e, 0, maxHeadX));
+
+			head[0].style.left = pos + 'px';
+
+			if(onSlide && typeof onSlide === 'function') onSlide(pos);
 		},
-		
-		getPos: function(e) 
+
+		getPositionFromNode = function(node) 
 		{
-			var x = 0, y = 0;
+			var x = 0;
 		
-			while (e !== null) 
+			while (node !== null) 
 			{
-				x += e.offsetLeft;
-				y += e.offsetTop;
-				e = e.offsetParent;
-				}
+				x += node.offsetLeft;
+				node = node.offsetParent;
+			}
 	
-			return { x: x, y: x };
+			return x;
 		},
-		
-		getRelPos: function(to, event) 
+
+		getRelativePosition = function(node, e)
 		{
-			var pos = this.getPos(to);
-		
-			return { 
-				x: event.pageX - pos.x,
-				y: event.pageY - pos.y
-			};
-		},
-		
-		defaults: 
-		{
-			startPos: 0
-		}	
-	};
-	
-	$.fn.fancySlider = function(options) 
-	{
-		return this.each(function()
-		{
-			var opts = $.extend({}, options, $(this).data('options')),
-			instance = $.data(this, 'fancySlider') || $.data(this, 'fancySlider', new FancySlider(this, opts));
-		});
+			return (e.pageX || e.originalEvent.touches[0].pageX) - getPositionFromNode(node);
+		};
+
+		init();
+
+		return {
+			set: setPosition
+		};
 	};
 
-}(jQuery));
+}(window));

@@ -8,29 +8,30 @@
 </head>
 <body>
 	<h1>fancySlider</h1>
-	<input type="range" min="0" max="1" step="0.1" data-options='{"startPos": "0"}' name="slider" id="fancySlider">
-	<button>Move slider to 30%</button>
+	<input type="range" id="fancySlider">
 	
 	<p>fancySlider is very small and barebones slider script that can be used for custom range sliders or media players that need custom controls. It has support for both touch and mouse devices.</p>
-	<script src="../libs/jquery/jquery.js"></script>
-	<script src="../dist/fancySlider.0.1.0.min.js"></script>
+	<script src="http://code.jquery.com/jquery.min.js"></script>
+	<script src="../src/fancySlider.js"></script>
 	
 	<script>
 		$(function()
 		{
-			$('#fancySlider').fancySlider();
-			
-			var sliderApi = $('#fancySlider').data('fancySlider');
-			
-			$('#fancySlider').on('slide', function(e)
-			{
-				console.log(e.position);
-			});
+			var slide = new Slider($('#fancySlider')[0], 
+				{
+					startPos: 20,
+					onSlide: function(pos)
+					{
+						console.log('onslide', pos);
+					},
 
-			$('button').click(function()
-			{
-				$('#fancySlider').trigger({ type: 'slideTo', position: 0.3 });
-			});
+					onSlideEnd: function(pos)
+					{
+						console.log('onend', pos);
+					}
+				});
+
+			slide.set(100)
 		});
 	</script>
 </body>
